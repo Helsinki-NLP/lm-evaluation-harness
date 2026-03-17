@@ -92,6 +92,11 @@ Running full all-to-all evaluation (`40x39` directions) can be memory and runtim
 
 ## Citation
 
-OpenSubtitles2024: A Massively Parallel Dataset of Movie Subtitles for MT Development and Evaluation.
-Jörg Tiedemann and Hengyu Luo.
-Accepted at LREC 2026 (15th Language Resources and Evaluation Conference).
+```
+@inproceedings{tiedemann-luo-2026-opensubtitles2024,
+  title={OpenSubtitles2024: A Massively Parallel Dataset of Movie Subtitles for MT Development and Evaluation},
+  author={Tiedemann, Jörg and Luo, Hengyu},
+  booktitle={Proceedings of the 15th edition of the Language Resources and Evaluation Conference (LREC 2026)},
+  year={2026}
+}
+```
