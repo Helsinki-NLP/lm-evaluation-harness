@@ -15,8 +15,7 @@ Why:
 Example:
 
 ```bash
-git clone <your-repo-url>
-cd <your-repo>
+# After cloning this task repository and entering its root directory:
 
 python -m lm_eval run \
   --model vllm \
