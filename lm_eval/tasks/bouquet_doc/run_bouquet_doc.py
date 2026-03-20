@@ -3,8 +3,8 @@
 
 Examples
 --------
-python run_bouquet.py hin_Deva-spa_Latn --model hf --model_args pretrained=...
-python run_bouquet.py eng_Latn-fra_Latn --model vllm --model_args pretrained=...
+python run_bouquet_doc.py hin_Deva-spa_Latn --model hf --model_args pretrained=...
+python run_bouquet_doc.py eng_Latn-fra_Latn --model vllm --model_args pretrained=...
 """
 
 from __future__ import annotations
@@ -20,18 +20,14 @@ GENERIC_TASK_NAME = "bouquet-doc-generic"
 def parse_pair(pair: str) -> tuple[str, str]:
     """Parse an official BOUQuET language pair like 'hin_Deva-spa_Latn'."""
     if "-" not in pair:
-        raise ValueError(
-            f"Pair must look like 'src_lang-tgt_lang', got '{pair}'."
-        )
+        raise ValueError(f"Pair must look like 'src_lang-tgt_lang', got '{pair}'.")
 
     src_lang, tgt_lang = pair.split("-", maxsplit=1)
     src_lang = src_lang.strip()
     tgt_lang = tgt_lang.strip()
 
     if not src_lang or not tgt_lang:
-        raise ValueError(
-            f"Pair must look like 'src_lang-tgt_lang', got '{pair}'."
-        )
+        raise ValueError(f"Pair must look like 'src_lang-tgt_lang', got '{pair}'.")
 
     if src_lang == tgt_lang:
         raise ValueError("Source and target languages must differ.")

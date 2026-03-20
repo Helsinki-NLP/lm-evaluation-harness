@@ -5,13 +5,15 @@ This module exposes:
 - shared prompt rendering helpers
 - paragraph/document reconstruction from sentence-level BOUQuET rows
 
-Unlike the earlier English-centric version, this implementation supports
-arbitrary source-target pairs as long as either:
-- src_lang -> tgt_lang exists in the dataset, or
-- tgt_lang -> src_lang exists and can be swapped
+Supported behavior:
+- direct bilingual pair if present
+- reverse bilingual pair if only the reverse exists
+- otherwise, for non-English↔non-English pairs, reconstruct through
+  English-aligned paragraph views
 
-This makes it suitable for a single generic task plus runtime metadata, e.g.
-src_lang=hin_Deva, tgt_lang=spa_Latn.
+This makes it suitable for:
+- English-centric static tasks
+- a generic runtime task, e.g. src_lang=hin_Deva, tgt_lang=spa_Latn
 """
 
 from __future__ import annotations
@@ -22,6 +24,8 @@ from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Iterable, List, Tuple
 
 from datasets import Dataset, load_dataset
+
+EN_CODE = "eng_Latn"
 
 # Friendly names for prompt rendering.
 # Unknown codes fall back to the raw code.
@@ -149,10 +153,7 @@ def _sent_sort_key(row: Dict[str, Any]) -> Tuple[Any, ...]:
 
 
 def _lang_name(code: str) -> str:
-    info = LANG_METADATA.get(code)
-    if info is None:
-        return code
-    return str(info["lang"])
+    return LANG_METADATA.get(code, code)
 
 
 def render_prompt(*, src_code: str, tgt_code: str, source_text: str) -> str:
@@ -288,6 +289,76 @@ def _group_pair_to_documents_from_rows(
     return Dataset.from_list(docs)
 
 
+def _collect_lang_against_english(
+    rows: Dataset,
+    *,
+    lang: str,
+) -> Dict[str, List[str]]:
+    """Return {par_id: [sentences]} for one non-English language aligned via English.
+
+    Accepts either underlying storage direction:
+    - eng_Latn -> lang  => use tgt side
+    - lang -> eng_Latn  => use src side
+    """
+    forward = _collect_sentence_paragraphs(
+        rows,
+        src_code=EN_CODE,
+        tgt_code=lang,
+        side="tgt",
+    )
+
+    reverse = _collect_sentence_paragraphs(
+        rows,
+        src_code=lang,
+        tgt_code=EN_CODE,
+        side="src",
+    )
+
+    if forward and reverse:
+        # Prefer forward if both are present; consistency matters more than policy.
+        return forward
+    if forward:
+        return forward
+    if reverse:
+        return reverse
+
+    raise ValueError(
+        f"Language {lang} was not found aligned with English in this split."
+    )
+
+
+def _load_non_english_pair_via_english(
+    rows: Dataset,
+    *,
+    src_lang: str,
+    tgt_lang: str,
+) -> Dataset:
+    """Reconstruct a non-English pair using English-aligned paragraph views."""
+    src_paras = _collect_lang_against_english(rows, lang=src_lang)
+    tgt_paras = _collect_lang_against_english(rows, lang=tgt_lang)
+
+    common_par_ids = sorted(set(src_paras) & set(tgt_paras), key=_id_sort_key)
+
+    docs: List[Dict[str, Any]] = []
+    for par_id in common_par_ids:
+        source_sents = src_paras[par_id]
+        target_sents = tgt_paras[par_id]
+
+        docs.append(
+            {
+                "document_id": par_id,
+                "lp": f"{src_lang}-{tgt_lang}",
+                "src_lang": src_lang,
+                "tgt_lang": tgt_lang,
+                "source": "\n".join(source_sents),
+                "target": "\n".join(target_sents),
+                "num_segments": len(source_sents),
+            }
+        )
+
+    return Dataset.from_list(docs)
+
+
 def _load_split(split: str, **kwargs: Any) -> Dataset:
     """Load one BOUQuET split.
 
@@ -324,9 +395,11 @@ def load_bouquet_dataset(
 ) -> Dict[str, Dataset]:
     """Load document-level BOUQuET for an arbitrary direction.
 
-    If the requested direction is not directly present in the dataset, but the
-    reverse direction is present, the reverse rows are used and source/target
-    are swapped so the exposed task still matches the requested direction.
+    Resolution strategy:
+    1. Use direct bilingual rows if present.
+    2. Else use reversed bilingual rows if present.
+    3. Else, if both languages are non-English, reconstruct the pair by
+       aligning each language against English and intersecting on `par_id`.
 
     Parameters
     ----------
@@ -349,6 +422,7 @@ def load_bouquet_dataset(
 
     rows = _load_split(split)
 
+    # Case 1: direct pair exists
     if _pair_exists(rows, src_lang=src_lang, tgt_lang=tgt_lang):
         ds = _group_pair_to_documents_from_rows(
             rows,
@@ -360,6 +434,7 @@ def load_bouquet_dataset(
         )
         return {split: ds}
 
+    # Case 2: reverse direct pair exists
     if _pair_exists(rows, src_lang=tgt_lang, tgt_lang=src_lang):
         ds = _group_pair_to_documents_from_rows(
             rows,
@@ -371,6 +446,15 @@ def load_bouquet_dataset(
         )
         return {split: ds}
 
+    # Case 3: non-English pair reconstructed via English alignment
+    if src_lang != EN_CODE and tgt_lang != EN_CODE:
+        ds = _load_non_english_pair_via_english(
+            rows,
+            src_lang=src_lang,
+            tgt_lang=tgt_lang,
+        )
+        return {split: ds}
+
     raise ValueError(
-        f"Neither {src_lang}-{tgt_lang} nor {tgt_lang}-{src_lang} was found in BOUQuET split '{split}'."
+        f"Could not construct pair {src_lang}-{tgt_lang} from BOUQuET split '{split}'."
     )

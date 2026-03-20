@@ -2,7 +2,7 @@ task: bouquet-doc-generic
 
 dataset_path: facebook/bouquet
 training_split: null
-validation_split: dev
+validation_split: null
 test_split: test
 
 output_type: generate_until
