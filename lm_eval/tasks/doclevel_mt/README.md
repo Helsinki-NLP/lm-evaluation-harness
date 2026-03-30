@@ -15,10 +15,9 @@ Currently, this collection covers:
 
 The goal of this collection is to make it easy to run:
 
-* all document-level MT tasks together
+* all English-centric bidirectional document-level MT tasks together
 * all **English → X** document-level tasks together
 * all **X → English** document-level tasks together
-* all English-centric bidirectional document-level MT tasks together
 
 This is especially useful for broad evaluation sweeps across multiple benchmarks with a single `--tasks` argument.
 
@@ -43,7 +42,6 @@ Typical groups include:
 This family provides:
 
 * English-centric document-level tasks:
-
   * `bouquet-doc-en-all`
   * `bouquet-doc-all-en`
   * `bouquet-doc-bidirectional-all`
@@ -91,12 +89,11 @@ This collection is intended to provide groups such as:
 * `doc-mt-all`
 * `doc-mt-en-all`
 * `doc-mt-all-en`
-* `doc-mt-bidirectional-all`
 
 Their purpose is:
 
 * **`doc-mt-all`**
-  Run all included document-level MT task families together.
+  Run all included English-centric bidirectional document-level MT tasks together.
 
 * **`doc-mt-en-all`**
   Run all included **English → X** document-level MT tasks.
@@ -104,14 +101,10 @@ Their purpose is:
 * **`doc-mt-all-en`**
   Run all included **X → English** document-level MT tasks.
 
-* **`doc-mt-bidirectional-all`**
-  Run all included English-centric bidirectional document-level MT tasks together.
-
-Depending on the exact group YAML definitions, some multilingual-only tasks may appear only in `doc-mt-all` and not in the English-centric groups.
 
 ## Running the collection
 
-Run all included document-level MT tasks:
+Run all English-centric document-level MT tasks:
 
 ```bash id="v4nb1b"
 python -m lm_eval run \
@@ -133,14 +126,6 @@ Run all **X → English** document-level MT tasks:
 python -m lm_eval run \
   --model hf --model_args pretrained=... \
   --tasks doc-mt-all-en
-```
-
-Run all English-centric bidirectional document-level MT tasks:
-
-```bash id="tvsl8p"
-python -m lm_eval run \
-  --model hf --model_args pretrained=... \
-  --tasks doc-mt-bidirectional-all
 ```
 
 ## Notes
